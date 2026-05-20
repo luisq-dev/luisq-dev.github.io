@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadenas de Markov</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <link rel="icon" href="assets/sumatorio.jpg" type="image/jpeg">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════ NAV -->
+  <nav id="navbar">
+    <div class="nav-logo">∑ Markov</div>
+    <ul class="nav-links">
+      <li><a href="#intro">Inicio</a></li>
+      <li><a href="#concepto">Concepto</a></li>
+      <li><a href="#estados">Estados</a></li>
+      <li><a href="#matriz">Matriz</a></li>
+      <li><a href="#estacionaria">Estacionaria</a></li>
+      <li><a href="#simulador">Simulador</a></li>
+      <li><a href="#aplicaciones">Aplicaciones</a></li>
+    </ul>
+    <button class="nav-toggle" id="navToggle">☰</button>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════ HERO -->
+  <section id="intro" class="hero">
+    <canvas id="heroCanvas"></canvas>
+    <div class="hero-content">
+      <div class="hero-badge">Universidad de Cartagena · Investigación de Operaciones</div>
+      <h1 class="hero-title">
+        <span class="title-line">Cadenas de</span>
+        <span class="title-line accent">Markov</span>
+      </h1>
+      <p class="hero-sub">Modela el futuro conociendo solo el presente. Una guía visual, interactiva y completa sobre procesos estocásticos en tiempo discreto.</p>
+      <div class="hero-btns">
+        <a href="#concepto" class="btn btn-primary">Comenzar →</a>
+        <a href="#simulador" class="btn btn-ghost">Ir al simulador</a>
+      </div>
+    </div>
+    <div class="hero-scroll-hint">↓ Desplázate para explorar</div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ CONCEPTO -->
+  <section id="concepto" class="section">
+    <div class="container">
+      <div class="section-label">01 — Fundamentos</div>
+      <h2 class="section-title">¿Qué es una Cadena de Markov?</h2>
+
+      <div class="concept-grid">
+        <div class="concept-text">
+          <p class="lead">Un <strong>proceso estocástico</strong> es una colección de variables aleatorias indexadas por el tiempo. Cuando el espacio de estados y el tiempo son discretos, hablamos de una <strong>Cadena de Markov en Tiempo Discreto</strong>.</p>
+          <p>La idea clave es la <strong>Propiedad de Markov</strong> (o propiedad sin memoria): el estado futuro del sistema depende <em>únicamente</em> del estado presente, no de la historia pasada.</p>
+          <div class="math-block">
+            <span class="math-label">Propiedad de Markov</span>
+            <div class="formula">P(X<sub>n+1</sub> = j | X<sub>n</sub> = i, X<sub>n−1</sub>, …, X<sub>0</sub>) = P(X<sub>n+1</sub> = j | X<sub>n</sub> = i)</div>
+          </div>
+          <p>Donde <code>p<sub>ij</sub></code> es la <strong>probabilidad de transición</strong> del estado <em>i</em> al estado <em>j</em> en un solo paso.</p>
+        </div>
+        <div class="concept-visual">
+          <div class="analogy-card">
+            <div class="analogy-icon">🌤️</div>
+            <h3>Analogía: El Clima</h3>
+            <p>Si hoy está <strong>soleado</strong>, la probabilidad de que mañana llueva es 0.3, independientemente del clima de ayer o de hace una semana.</p>
+            <p>Solo importa el <strong>estado de hoy</strong>.</p>
+          </div>
+          <div class="homogeneous-note">
+            <span class="tag">Cadena Homogénea</span>
+            <p>Cuando las probabilidades de transición son <strong>constantes en el tiempo</strong>, la cadena es homogénea. Es el tipo más utilizado en modelación.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini demo interactivo -->
+      <div class="demo-markov-property">
+        <h3>Visualiza la propiedad sin memoria</h3>
+        <p>Haz clic en cualquier estado para ver cómo <strong>solo importa el estado actual</strong> para predecir el siguiente:</p>
+        <div class="path-demo" id="pathDemo">
+          <div class="path-steps" id="pathSteps"></div>
+          <div class="path-prediction" id="pathPrediction"></div>
+        </div>
+        <button class="btn btn-sm" id="resetPath">Reiniciar camino</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ ESTADOS -->
+  <section id="estados" class="section section-dark">
+    <div class="container">
+      <div class="section-label">02 — Clasificación</div>
+      <h2 class="section-title">Tipos de Estados</h2>
+      <p class="section-intro">La clasificación de estados permite analizar el comportamiento a largo plazo del sistema. Haz clic en cada tipo para explorar su definición e identificarlo en el diagrama.</p>
+
+      <div class="states-layout">
+        <div class="states-cards">
+          <div class="state-card" data-state="absorbente" tabindex="0">
+            <div class="state-card-header">
+              <span class="state-icon">⚓</span>
+              <span class="state-name">Absorbente</span>
+            </div>
+            <p>Una vez que el sistema entra, <strong>no puede salir</strong>. Se cumple que p<sub>ii</sub> = 1.</p>
+            <div class="state-condition">p<sub>ii</sub> = 1</div>
+          </div>
+          <div class="state-card" data-state="transitorio" tabindex="0">
+            <div class="state-card-header">
+              <span class="state-icon">🚪</span>
+              <span class="state-name">Transitorio</span>
+            </div>
+            <p>Puede abandonarse y <strong>no hay garantía de regreso</strong>. La probabilidad de retorno es menor que 1.</p>
+            <div class="state-condition">P(retorno) &lt; 1</div>
+          </div>
+          <div class="state-card" data-state="recurrente" tabindex="0">
+            <div class="state-card-header">
+              <span class="state-icon">🔄</span>
+              <span class="state-name">Recurrente</span>
+            </div>
+            <p>El sistema <strong>regresa con certeza</strong> (probabilidad 1). Puede ser <em>positivo</em> (tiempo medio de retorno finito) o <em>nulo</em>.</p>
+            <div class="state-condition">P(retorno) = 1</div>
+          </div>
+          <div class="state-card" data-state="ergodico" tabindex="0">
+            <div class="state-card-header">
+              <span class="state-icon">♾️</span>
+              <span class="state-name">Ergódico</span>
+            </div>
+            <p>Recurrente positivo y <strong>aperiódico</strong>. Las cadenas ergódicas tienen distribución estacionaria única.</p>
+            <div class="state-condition">Recurrente + Aperiódico</div>
+          </div>
+          <div class="state-card" data-state="periodo" tabindex="0">
+            <div class="state-card-header">
+              <span class="state-icon">📅</span>
+              <span class="state-name">Período</span>
+            </div>
+            <p>El <strong>MCD</strong> de todos los tiempos posibles de retorno al estado. Si período = 1, el estado es <em>aperiódico</em>.</p>
+            <div class="state-condition">d(i) = mcd{n: p<sub>ii</sub><sup>(n)</sup> > 0}</div>
+          </div>
+        </div>
+
+        <div class="states-diagram-container">
+          <svg id="statesDiagram" viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="diagram-legend" id="diagramLegend">
+            <p>← Selecciona un tipo de estado para destacarlo en el diagrama</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ MATRIZ -->
+  <section id="matriz" class="section">
+    <div class="container">
+      <div class="section-label">03 — Herramienta central</div>
+      <h2 class="section-title">Matriz de Transición</h2>
+      <p class="section-intro">La matriz de transición P reúne todas las probabilidades de cambio entre estados. Para una cadena con k estados, P es de orden k × k.</p>
+
+      <div class="matrix-layout">
+        <div class="matrix-theory">
+          <h3>Condiciones obligatorias</h3>
+          <div class="conditions-list">
+            <div class="condition-item">
+              <span class="condition-num">①</span>
+              <div>
+                <strong>No negatividad</strong>
+                <p>Todos los elementos p<sub>ij</sub> ≥ 0</p>
+              </div>
+            </div>
+            <div class="condition-item">
+              <span class="condition-num">②</span>
+              <div>
+                <strong>Filas suman 1</strong>
+                <p>∑<sub>j</sub> p<sub>ij</sub> = 1 para todo i</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="math-block mt">
+            <span class="math-label">Probabilidades en n pasos</span>
+            <div class="formula">P<sup>(n)</sup> = P<sup>n</sup></div>
+            <p class="formula-note">La potencia n-ésima de la matriz da las probabilidades de transición en n pasos.</p>
+          </div>
+
+          <div class="math-block">
+            <span class="math-label">Ecuación de Chapman-Kolmogorov</span>
+            <div class="formula">p<sub>ij</sub><sup>(m+n)</sup> = ∑<sub>k</sub> p<sub>ik</sub><sup>(m)</sup> · p<sub>kj</sub><sup>(n)</sup></div>
+          </div>
+        </div>
+
+        <!-- Constructor interactivo de matriz -->
+        <div class="matrix-builder">
+          <h3>Constructor de Matriz Interactivo</h3>
+          <div class="builder-controls">
+            <label>Número de estados:
+              <select id="matrixSize">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </label>
+            <button class="btn btn-sm" id="randomMatrix">Aleatorio</button>
+            <button class="btn btn-sm btn-ghost" id="clearMatrix">Limpiar</button>
+          </div>
+          <div id="matrixInputArea"></div>
+          <div id="matrixValidation" class="validation-msg"></div>
+          <div class="matrix-actions">
+            <button class="btn btn-primary" id="computeMatrix">Calcular P² y P³</button>
+          </div>
+          <div id="matrixResults" class="matrix-results"></div>
+        </div>
+      </div>
+
+      <!-- Diagrama de transición -->
+      <div class="transition-diagram-section">
+        <h3>Diagrama de Transición</h3>
+        <p>El diagrama de transición es la representación visual de la matriz. Cada flecha muestra la probabilidad de moverse de un estado a otro.</p>
+        <div class="diagram-wrapper">
+          <svg id="transitionDiagram" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ DISTRIBUCIÓN ESTACIONARIA -->
+  <section id="estacionaria" class="section section-dark">
+    <div class="container">
+      <div class="section-label">04 — Largo plazo</div>
+      <h2 class="section-title">Distribución Estacionaria</h2>
+      <p class="section-intro">La distribución estacionaria π describe el comportamiento estable del sistema a largo plazo: la proporción de tiempo que permanece en cada estado cuando n → ∞.</p>
+
+      <div class="stationary-layout">
+        <div class="stationary-theory">
+          <div class="math-block">
+            <span class="math-label">Ecuación de equilibrio</span>
+            <div class="formula">π = π · P</div>
+            <p class="formula-note">sujeto a ∑<sub>i</sub> π<sub>i</sub> = 1 y π<sub>i</sub> ≥ 0 para todo i</p>
+          </div>
+
+          <div class="math-block">
+            <span class="math-label">Convergencia (cadena ergódica)</span>
+            <div class="formula">lim<sub>n→∞</sub> p<sub>ij</sub><sup>(n)</sup> = π<sub>j</sub> para todo i, j</div>
+            <p class="formula-note">Sin importar el estado inicial, la distribución converge a π.</p>
+          </div>
+
+          <h3>Procedimiento de cálculo</h3>
+          <div class="steps-list">
+            <div class="step-item">
+              <span class="step-num">1</span>
+              <div><strong>Plantear el sistema</strong><br>Escribir π = πP como sistema lineal.</div>
+            </div>
+            <div class="step-item">
+              <span class="step-num">2</span>
+              <div><strong>Agregar normalización</strong><br>Añadir π₁ + π₂ + … + πₖ = 1.</div>
+            </div>
+            <div class="step-item">
+              <span class="step-num">3</span>
+              <div><strong>Reemplazar una ecuación</strong><br>Sustituir una ecuación redundante por la de normalización.</div>
+            </div>
+            <div class="step-item">
+              <span class="step-num">4</span>
+              <div><strong>Resolver el sistema</strong><br>Aplicar eliminación gaussiana o sustitución.</div>
+            </div>
+            <div class="step-item">
+              <span class="step-num">5</span>
+              <div><strong>Verificar</strong><br>Confirmar que πP = π y ∑πᵢ = 1.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stationary-calculator">
+          <h3>Calculadora de Distribución Estacionaria</h3>
+          <p>Ingresa una matriz de transición para calcular automáticamente su distribución estacionaria:</p>
+          <div class="builder-controls">
+            <label>Estados:
+              <select id="stationarySize">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+              </select>
+            </label>
+            <button class="btn btn-sm" id="stationaryRandom">Ejemplo del TCC</button>
+          </div>
+          <div id="stationaryInputArea"></div>
+          <button class="btn btn-primary mt" id="computeStationary">Calcular π</button>
+          <div id="stationaryResults"></div>
+          <div id="stationaryChart" class="stationary-chart"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ SIMULADOR -->
+  <section id="simulador" class="section">
+    <div class="container">
+      <div class="section-label">05 — Experimento</div>
+      <h2 class="section-title">Simulador de Cadenas de Markov</h2>
+      <p class="section-intro">Simula una cadena de Markov paso a paso o automáticamente. Observa cómo la distribución empírica converge a la distribución estacionaria teórica.</p>
+
+      <div class="simulator-layout">
+        <div class="sim-controls">
+          <h3>Configuración</h3>
+          <div class="sim-scenario">
+            <label>Escenario predefinido:</label>
+            <select id="simScenario">
+              <option value="clima">🌤️ Clima (Sol/Nublado/Lluvia)</option>
+              <option value="mercado">📈 Mercado (Sube/Estable/Baja)</option>
+              <option value="cliente">🛒 Comportamiento de Cliente</option>
+              <option value="custom">⚙️ Personalizado</option>
+            </select>
+          </div>
+          <div id="simMatrixArea"></div>
+          <div class="sim-init">
+            <label>Estado inicial: <select id="simInitState"></select></label>
+          </div>
+          <div class="sim-speed">
+            <label>Velocidad: <input type="range" id="simSpeed" min="100" max="1000" value="500" /></label>
+            <span id="simSpeedLabel">500ms</span>
+          </div>
+          <div class="sim-btn-group">
+            <button class="btn btn-primary" id="simStep">Paso →</button>
+            <button class="btn btn-primary" id="simAuto">▶ Auto</button>
+            <button class="btn btn-ghost" id="simReset">↺ Reset</button>
+          </div>
+          <div class="sim-stats">
+            <div class="stat-item"><span class="stat-label">Pasos:</span><span id="statSteps">0</span></div>
+            <div class="stat-item"><span class="stat-label">Estado actual:</span><span id="statCurrent">—</span></div>
+          </div>
+        </div>
+
+        <div class="sim-visualization">
+          <div class="sim-chain-container">
+            <h4>Cadena recorrida</h4>
+            <div id="simChain" class="sim-chain"></div>
+          </div>
+          <div class="sim-graph-container">
+            <h4>Distribución empírica vs. estacionaria</h4>
+            <canvas id="simChart" height="200"></canvas>
+          </div>
+          <div class="sim-state-diagram">
+            <h4>Diagrama de estados (estado activo resaltado)</h4>
+            <svg id="simDiagram" viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ N-PASOS -->
+  <section id="npasos" class="section section-dark">
+    <div class="container">
+      <div class="section-label">06 — Predicción</div>
+      <h2 class="section-title">Probabilidades en N Pasos</h2>
+      <p class="section-intro">Calcula la probabilidad de encontrarse en cualquier estado después de exactamente n pasos, partiendo de un estado inicial específico.</p>
+
+      <div class="nstep-layout">
+        <div class="nstep-controls">
+          <h3>Calculadora de N Pasos</h3>
+          <div class="builder-controls">
+            <label>Tamaño:
+              <select id="nstepSize">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+              </select>
+            </label>
+            <button class="btn btn-sm" id="nstepExample">Cargar ejemplo</button>
+          </div>
+          <div id="nstepMatrixArea"></div>
+          <div class="nstep-params">
+            <label>Estado inicial (i):
+              <select id="nstepInit"></select>
+            </label>
+            <label>Número de pasos (n):
+              <input type="number" id="nstepN" value="5" min="1" max="50" />
+            </label>
+          </div>
+          <button class="btn btn-primary mt" id="computeNstep">Calcular</button>
+        </div>
+        <div class="nstep-results" id="nstepResults">
+          <p class="placeholder-text">Ingresa una matriz y haz clic en Calcular para ver los resultados.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ APLICACIONES -->
+  <section id="aplicaciones" class="section">
+    <div class="container">
+      <div class="section-label">07 — Contexto colombiano</div>
+      <h2 class="section-title">Aplicaciones Reales</h2>
+      <p class="section-intro">Las Cadenas de Markov tienen aplicaciones en múltiples sectores. Aquí algunos casos prácticos contextualizados en Colombia.</p>
+
+      <div class="apps-grid">
+
+        <div class="app-card" data-app="clima">
+          <div class="app-header">
+            <span class="app-emoji">🌤️</span>
+            <div>
+              <h3>Predicción Climática</h3>
+              <span class="app-sector">Meteorología · Cartagena</span>
+            </div>
+          </div>
+          <p>Modelar las transiciones entre estados climáticos (soleado, nublado, lluvioso) en Cartagena para optimizar actividades turísticas y logísticas portuarias.</p>
+          <button class="btn btn-sm app-explore" data-app="clima">Explorar caso →</button>
+        </div>
+
+        <div class="app-card" data-app="mercado">
+          <div class="app-header">
+            <span class="app-emoji">📈</span>
+            <div>
+              <h3>Análisis de Mercado</h3>
+              <span class="app-sector">Finanzas · Bolsa de Valores</span>
+            </div>
+          </div>
+          <p>Modelar la fluctuación de precios de acciones en la Bolsa de Valores de Colombia, clasificando estados como alcista, estable o bajista.</p>
+          <button class="btn btn-sm app-explore" data-app="mercado">Explorar caso →</button>
+        </div>
+
+        <div class="app-card" data-app="cliente">
+          <div class="app-header">
+            <span class="app-emoji">🛒</span>
+            <div>
+              <h3>Comportamiento del Cliente</h3>
+              <span class="app-sector">Mercadeo · Retail</span>
+            </div>
+          </div>
+          <p>Predecir la fidelidad y migración de clientes entre marcas competidoras en el mercado colombiano para optimizar estrategias de retención.</p>
+          <button class="btn btn-sm app-explore" data-app="cliente">Explorar caso →</button>
+        </div>
+
+        <div class="app-card" data-app="salud">
+          <div class="app-header">
+            <span class="app-emoji">🏥</span>
+            <div>
+              <h3>Epidemiología</h3>
+              <span class="app-sector">Salud Pública · Modelos SIR</span>
+            </div>
+          </div>
+          <p>Modelar la propagación de enfermedades con estados Susceptible, Infectado y Recuperado para apoyar decisiones de política pública de salud.</p>
+          <button class="btn btn-sm app-explore" data-app="salud">Explorar caso →</button>
+        </div>
+
+        <div class="app-card" data-app="inventario">
+          <div class="app-header">
+            <span class="app-emoji">📦</span>
+            <div>
+              <h3>Control de Inventario</h3>
+              <span class="app-sector">Logística · Cadena de Suministro</span>
+            </div>
+          </div>
+          <p>Gestionar niveles de inventario en almacenes de distribución modelando los estados de existencias y definiendo políticas óptimas de reorden.</p>
+          <button class="btn btn-sm app-explore" data-app="inventario">Explorar caso →</button>
+        </div>
+
+        <div class="app-card" data-app="demografico">
+          <div class="app-header">
+            <span class="app-emoji">👥</span>
+            <div>
+              <h3>Movilidad Social</h3>
+              <span class="app-sector">Demografía · Sociología</span>
+            </div>
+          </div>
+          <p>Analizar la movilidad entre estratos socioeconómicos en Colombia para estudiar la desigualdad y la efectividad de políticas redistributivas.</p>
+          <button class="btn btn-sm app-explore" data-app="demografico">Explorar caso →</button>
+        </div>
+
+      </div>
+
+      <!-- Modal de caso práctico -->
+      <div id="appModal" class="modal hidden">
+        <div class="modal-backdrop" id="modalBackdrop"></div>
+        <div class="modal-content">
+          <button class="modal-close" id="modalClose">✕</button>
+          <div id="modalBody"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ QUIZ -->
+  <section id="quiz" class="section section-dark">
+    <div class="container">
+      <div class="section-label">08 — Autoevaluación</div>
+      <h2 class="section-title">Pon a Prueba tu Conocimiento</h2>
+      <p class="section-intro">Responde estas preguntas para verificar tu comprensión de las Cadenas de Markov.</p>
+
+      <div class="quiz-container" id="quizContainer"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ GLOSARIO -->
+  <section id="glosario" class="section">
+    <div class="container">
+      <div class="section-label">09 — Referencia</div>
+      <h2 class="section-title">Glosario de Términos</h2>
+      <div class="glossary-search">
+        <input type="text" id="glossarySearch" placeholder="Buscar término..." />
+      </div>
+      <div class="glossary-grid" id="glossaryGrid"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <span class="footer-logo">∑ Markov</span>
+          <p>Guía Interactiva sobre Cadenas de Markov en Tiempo Discreto</p>
+        </div>
+        <div class="footer-info">
+          <p><strong>Universidad de Cartagena</strong> · Facultad de Ingeniería</p>
+          <p>Investigación de Operaciones · C1 · 2026-1</p>
+          <p>Tutor: Luis Alberto Martínez Magallanes</p>
+        </div>
+        <div class="footer-authors">
+          <p><strong>Autores</strong></p>
+          <p>Junior Eduardo Rios Beleño</p>
+          <p>Camilo Torres Pedrozo</p>
+          <p>Luis Javier Quintero Castro</p>
+          <p>Daniel Vasquez Gulloso</p>
+          <p>Antonia Beleño Herrera</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>Trabajo Colaborativo Contextualizado (TCC) · Cadenas de Markov · Entrega 06/06/2026</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
