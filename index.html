@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="icon" href="assets/sumatorio.jpg" type="image/jpeg">
 </head>
 <body>
@@ -24,7 +25,7 @@
       <li><a href="#simulador">Simulador</a></li>
       <li><a href="#aplicaciones">Aplicaciones</a></li>
     </ul>
-    <button class="nav-toggle" id="navToggle">☰</button>
+    <button class="nav-toggle" id="navToggle"><i class="fa-solid fa-bars"></i></button>
   </nav>
 
   <!-- ═══════════════════════════════════════════════════ HERO -->
@@ -63,7 +64,7 @@
         </div>
         <div class="concept-visual">
           <div class="analogy-card">
-            <div class="analogy-icon">🌤️</div>
+            <div class="analogy-icon"><i class="fa-solid fa-cloud-sun"></i></div>
             <h3>Analogía: El Clima</h3>
             <p>Si hoy está <strong>soleado</strong>, la probabilidad de que mañana llueva es 0.3, independientemente del clima de ayer o de hace una semana.</p>
             <p>Solo importa el <strong>estado de hoy</strong>.</p>
@@ -99,7 +100,7 @@
         <div class="states-cards">
           <div class="state-card" data-state="absorbente" tabindex="0">
             <div class="state-card-header">
-              <span class="state-icon">⚓</span>
+              <span class="state-icon"><i class="fa-solid fa-anchor"></i></span>
               <span class="state-name">Absorbente</span>
             </div>
             <p>Una vez que el sistema entra, <strong>no puede salir</strong>. Se cumple que p<sub>ii</sub> = 1.</p>
@@ -107,7 +108,7 @@
           </div>
           <div class="state-card" data-state="transitorio" tabindex="0">
             <div class="state-card-header">
-              <span class="state-icon">🚪</span>
+              <span class="state-icon"><i class="fa-solid fa-door-open"></i></span>
               <span class="state-name">Transitorio</span>
             </div>
             <p>Puede abandonarse y <strong>no hay garantía de regreso</strong>. La probabilidad de retorno es menor que 1.</p>
@@ -115,7 +116,7 @@
           </div>
           <div class="state-card" data-state="recurrente" tabindex="0">
             <div class="state-card-header">
-              <span class="state-icon">🔄</span>
+              <span class="state-icon"><i class="fa-solid fa-rotate"></i></span>
               <span class="state-name">Recurrente</span>
             </div>
             <p>El sistema <strong>regresa con certeza</strong> (probabilidad 1). Puede ser <em>positivo</em> (tiempo medio de retorno finito) o <em>nulo</em>.</p>
@@ -123,7 +124,7 @@
           </div>
           <div class="state-card" data-state="ergodico" tabindex="0">
             <div class="state-card-header">
-              <span class="state-icon">♾️</span>
+              <span class="state-icon"><i class="fa-solid fa-infinity"></i></span>
               <span class="state-name">Ergódico</span>
             </div>
             <p>Recurrente positivo y <strong>aperiódico</strong>. Las cadenas ergódicas tienen distribución estacionaria única.</p>
@@ -131,7 +132,7 @@
           </div>
           <div class="state-card" data-state="periodo" tabindex="0">
             <div class="state-card-header">
-              <span class="state-icon">📅</span>
+              <span class="state-icon"><i class="fa-solid fa-calendar-days"></i></span>
               <span class="state-name">Período</span>
             </div>
             <p>El <strong>MCD</strong> de todos los tiempos posibles de retorno al estado. Si período = 1, el estado es <em>aperiódico</em>.</p>
@@ -161,14 +162,14 @@
           <h3>Condiciones obligatorias</h3>
           <div class="conditions-list">
             <div class="condition-item">
-              <span class="condition-num">①</span>
+              <span class="condition-num">1</span>
               <div>
                 <strong>No negatividad</strong>
                 <p>Todos los elementos p<sub>ij</sub> ≥ 0</p>
               </div>
             </div>
             <div class="condition-item">
-              <span class="condition-num">②</span>
+              <span class="condition-num">2</span>
               <div>
                 <strong>Filas suman 1</strong>
                 <p>∑<sub>j</sub> p<sub>ij</sub> = 1 para todo i</p>
@@ -304,10 +305,10 @@
           <div class="sim-scenario">
             <label>Escenario predefinido:</label>
             <select id="simScenario">
-              <option value="clima">🌤️ Clima (Sol/Nublado/Lluvia)</option>
-              <option value="mercado">📈 Mercado (Sube/Estable/Baja)</option>
-              <option value="cliente">🛒 Comportamiento de Cliente</option>
-              <option value="custom">⚙️ Personalizado</option>
+              <option value="clima">Clima (Sol/Nublado/Lluvia)</option>
+              <option value="mercado">Mercado (Sube/Estable/Baja)</option>
+              <option value="cliente">Comportamiento de Cliente</option>
+              <option value="custom">Personalizado</option>
             </select>
           </div>
           <div id="simMatrixArea"></div>
@@ -321,7 +322,7 @@
           <div class="sim-btn-group">
             <button class="btn btn-primary" id="simStep">Paso →</button>
             <button class="btn btn-primary" id="simAuto">▶ Auto</button>
-            <button class="btn btn-ghost" id="simReset">↺ Reset</button>
+            <button class="btn btn-ghost" id="simReset"><i class="fa-solid fa-rotate-left"></i> Reset</button>
           </div>
           <div class="sim-stats">
             <div class="stat-item"><span class="stat-label">Pasos:</span><span id="statSteps">0</span></div>
@@ -340,7 +341,7 @@
           </div>
           <div class="sim-state-diagram">
             <h4>Diagrama de estados (estado activo resaltado)</h4>
-            <svg id="simDiagram" viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg"></svg>
+            <svg id="simDiagram" viewBox="0 0 540 440" xmlns="http://www.w3.org/2000/svg"></svg>
           </div>
         </div>
       </div>
@@ -396,7 +397,7 @@
 
         <div class="app-card" data-app="clima">
           <div class="app-header">
-            <span class="app-emoji">🌤️</span>
+            <span class="app-emoji"><i class="fa-solid fa-cloud-sun"></i></span>
             <div>
               <h3>Predicción Climática</h3>
               <span class="app-sector">Meteorología · Cartagena</span>
@@ -408,7 +409,7 @@
 
         <div class="app-card" data-app="mercado">
           <div class="app-header">
-            <span class="app-emoji">📈</span>
+            <span class="app-emoji"><i class="fa-solid fa-chart-line"></i></span>
             <div>
               <h3>Análisis de Mercado</h3>
               <span class="app-sector">Finanzas · Bolsa de Valores</span>
@@ -420,7 +421,7 @@
 
         <div class="app-card" data-app="cliente">
           <div class="app-header">
-            <span class="app-emoji">🛒</span>
+            <span class="app-emoji"><i class="fa-solid fa-cart-shopping"></i></span>
             <div>
               <h3>Comportamiento del Cliente</h3>
               <span class="app-sector">Mercadeo · Retail</span>
@@ -432,7 +433,7 @@
 
         <div class="app-card" data-app="salud">
           <div class="app-header">
-            <span class="app-emoji">🏥</span>
+            <span class="app-emoji"><i class="fa-solid fa-hospital"></i></span>
             <div>
               <h3>Epidemiología</h3>
               <span class="app-sector">Salud Pública · Modelos SIR</span>
@@ -444,7 +445,7 @@
 
         <div class="app-card" data-app="inventario">
           <div class="app-header">
-            <span class="app-emoji">📦</span>
+            <span class="app-emoji"><i class="fa-solid fa-box"></i></span>
             <div>
               <h3>Control de Inventario</h3>
               <span class="app-sector">Logística · Cadena de Suministro</span>
@@ -456,7 +457,7 @@
 
         <div class="app-card" data-app="demografico">
           <div class="app-header">
-            <span class="app-emoji">👥</span>
+            <span class="app-emoji"><i class="fa-solid fa-users"></i></span>
             <div>
               <h3>Movilidad Social</h3>
               <span class="app-sector">Demografía · Sociología</span>
@@ -472,7 +473,7 @@
       <div id="appModal" class="modal hidden">
         <div class="modal-backdrop" id="modalBackdrop"></div>
         <div class="modal-content">
-          <button class="modal-close" id="modalClose">✕</button>
+          <button class="modal-close" id="modalClose"><i class="fa-solid fa-xmark"></i></button>
           <div id="modalBody"></div>
         </div>
       </div>
@@ -516,20 +517,17 @@
           <p>Tutor: Luis Alberto Martínez Magallanes</p>
         </div>
         <div class="footer-authors">
-          <p><strong>Autores</strong></p>
-          <p>Junior Eduardo Rios Beleño</p>
-          <p>Camilo Torres Pedrozo</p>
-          <p>Luis Javier Quintero Castro</p>
-          <p>Daniel Vasquez Gulloso</p>
-          <p>Antonia Beleño Herrera</p>
+          <p><strong>Autor</strong></p>
+          <p><a href="https://github.com/luisq-dev"> luisq-dev</a></p>
         </div>
       </div>
       <div class="footer-bottom">
-        <p>Trabajo Colaborativo Contextualizado (TCC) · Cadenas de Markov · Entrega 06/06/2026</p>
+        <p>Trabajo Colaborativo Contextualizado (TCC) · Cadenas de Markov</p>
       </div>
     </div>
   </footer>
 
+  <button class="back-to-top" id="backToTop" aria-label="Volver arriba"><i class="fa-solid fa-arrow-up"></i></button>
   <script src="script.js"></script>
 </body>
 </html>

@@ -235,20 +235,24 @@ function initStatesDiagram() {
     transitorio:'S₂ y S₃ son <strong>transitorios</strong>: pueden migrar a S₁ o S₄ sin regresar.',
     recurrente: 'S₄ es <strong>recurrente</strong>: eventualmente regresa, pero aquí solo transita a S₅/S₆.',
     ergodico:   'S₅ y S₆ son <strong>ergódicos</strong>: recurrentes positivos, aperiódicos — tienen distribución estacionaria única.',
-    periodo:    'El <strong>período</strong> de S₅ es 1 (aperiódico), ya que puede regresar en 1 paso (p₅₅=0.4 > 0).',
+    periodo:    'El <strong>período</strong> de S₅ (y S₆) es 1 (aperiódico): pueden regresar en 1 paso (p₅₅=0.4, p₆₆=0.6).',
   };
 
   function renderDiagram(highlight) {
+    const matchPeriodo = (id) => highlight === 'periodo' && (id === 'S5');
+
     let edgeSVG = '';
     edges.forEach(e => {
       const from = nodes.find(n=>n.id===e.from);
       const to   = nodes.find(n=>n.id===e.to);
-      const isHi = highlight && (from.type===highlight || to.type===highlight);
+      const isHi = highlight && (
+        (highlight === 'periodo' && (matchPeriodo(e.from) || matchPeriodo(e.to))) ||
+        (from.type===highlight || to.type===highlight)
+      );
       const col  = isHi ? '#5ce1e6' : '#2a2f45';
       const marker = isHi ? 'arr-hi' : 'arr';
 
       if (e.from === e.to) {
-        // Self-loop
         const cx=from.x, cy=from.y;
         edgeSVG += `<path d="M${cx-10},${cy-26} C${cx-30},${cy-60} ${cx+30},${cy-60} ${cx+10},${cy-26}"
           fill="none" stroke="${col}" stroke-width="${isHi?2:1}" marker-end="url(#${marker})"/>
@@ -257,7 +261,6 @@ function initStatesDiagram() {
         const dx=to.x-from.x, dy=to.y-from.y, d=Math.sqrt(dx*dx+dy*dy);
         const nx=dx/d, ny=dy/d, r=26;
         const sx=from.x+nx*r, sy=from.y+ny*r, ex=to.x-nx*r, ey=to.y-ny*r;
-        // Slight curve
         const mx=(sx+ex)/2-ny*18, my=(sy+ey)/2+nx*18;
         edgeSVG += `<path d="M${sx},${sy} Q${mx},${my} ${ex},${ey}"
           fill="none" stroke="${col}" stroke-width="${isHi?2:1}" marker-end="url(#${marker})"/>
@@ -270,7 +273,10 @@ function initStatesDiagram() {
 
     let nodeSVG = '';
     nodes.forEach(n => {
-      const isHi = highlight && n.type===highlight;
+      const isHi = highlight && (
+        (highlight === 'periodo' && n.id === 'S5') ||
+        n.type===highlight
+      );
       const col = isHi ? n.color : '#2a2f45';
       const textCol = isHi ? '#fff' : '#5d6680';
       const stroke = isHi ? n.color : '#363d58';
@@ -414,7 +420,7 @@ const MatrixModule = {
     const svg=document.getElementById('transitionDiagram');
     if (!svg) return;
     const n=P.length, names=this.getStateNames();
-    const W=600,H=400, R=28, cx=W/2, cy=H/2, rad=150;
+    const W=600,H=460, R=28, cx=W/2, cy=H/2, rad=150;
     const pts=Array.from({length:n},(_,i)=>({
       x:cx+rad*Math.cos(2*Math.PI*i/n-Math.PI/2),
       y:cy+rad*Math.sin(2*Math.PI*i/n-Math.PI/2)
@@ -527,7 +533,7 @@ const StationaryModule = {
     P.forEach((row,i)=>{const s=row.reduce((a,x)=>a+x,0);if(Math.abs(s-1)>.01)ok=false;});
     const res=document.getElementById('stationaryResults');
     const chart=document.getElementById('stationaryChart');
-    if(!ok){res.innerHTML='<p style="color:var(--accent3);margin-top:.75rem">⚠ La matriz no es válida (filas no suman 1).</p>';chart.innerHTML='';return;}
+    if(!ok){res.innerHTML='<p style="color:var(--accent3);margin-top:.75rem"><i class="fa-solid fa-triangle-exclamation"></i> La matriz no es válida (filas no suman 1).</p>';chart.innerHTML='';return;}
 
     const pi=MathUtils.stationaryDist(P);
 
@@ -573,19 +579,19 @@ const StationaryModule = {
 const Simulator = {
   scenarios: {
     clima: {
-      names:['☀️ Sol','☁️ Nublado','🌧 Lluvia'],
+      names:['Sol','Nublado','Lluvia'], short:['S','N','L'],
       P:[[.6,.3,.1],[.3,.4,.3],[.2,.3,.5]]
     },
     mercado: {
-      names:['📈 Alcista','➡️ Estable','📉 Bajista'],
+      names:['Alcista','Estable','Bajista'], short:['A','E','B'],
       P:[[.5,.3,.2],[.2,.6,.2],[.1,.3,.6]]
     },
     cliente: {
-      names:['🟢 Activo','🟡 En riesgo','🔴 Perdido'],
+      names:['Activo','En riesgo','Perdido'], short:['A','R','P'],
       P:[[.7,.2,.1],[.3,.5,.2],[.0,.1,.9]]
     },
     custom: {
-      names:['A','B','C'],
+      names:['A','B','C'], short:['A','B','C'],
       P:[[.5,.3,.2],[.3,.4,.3],[.2,.3,.5]]
     }
   },
@@ -634,7 +640,7 @@ const Simulator = {
     for(let i=0;i<n;i++){
       html+=`<tr><th>${names[i]}</th>`;
       for(let j=0;j<n;j++) html+=`<td><input class="matrix-input" type="number" min="0" max="1" step="0.05"
-        data-si="${i}" data-sj="${j}" value="${this.current.P[i][j]}" style="width:3.5rem"/></td>`;
+        data-si="${i}" data-sj="${j}" value="${this.current.P[i][j]}"/></td>`;
       html+='</tr>';
     }
     html+='</tbody></table></div>';
@@ -648,7 +654,7 @@ const Simulator = {
 
   reset() {
     this.running=false; clearInterval(this.timer);
-    document.getElementById('simAuto').textContent='▶ Auto';
+    document.getElementById('simAuto').innerHTML='<i class="fa-solid fa-play"></i> Auto';
     this.step=0; this.history=[this.initState];
     this.counts=Array(this.current.names.length).fill(0);
     this.counts[this.initState]=1;
@@ -689,7 +695,7 @@ const Simulator = {
     chain.querySelectorAll('.latest').forEach(el=>el.classList.remove('latest'));
     const el=document.createElement('div');
     el.className='sim-token'+(latest?' latest':'');
-    el.textContent=this.current.names[state].split(' ')[0]||state;
+    el.textContent=this.current.short[state];
     el.style.background=STATE_COLORS_BG[state%STATE_COLORS_BG.length];
     el.style.border=`2px solid ${STATE_COLORS[state%STATE_COLORS.length]}`;
     el.style.color=STATE_COLORS[state%STATE_COLORS.length];
@@ -709,41 +715,40 @@ const Simulator = {
     let stationary;
     try { stationary=MathUtils.stationaryDist(this.current.P); } catch(e){ stationary=Array(n).fill(1/n); }
 
-    const W=canvas.offsetWidth||600, H=200;
+    const W=canvas.offsetWidth||600, H=220;
     canvas.width=W; canvas.height=H;
     ctx.clearRect(0,0,W,H);
 
     const bw=Math.min(60,(W/(n*2+1)));
     const gap=bw*.5;
     const total_w=(bw*2+gap)*n;
-    const startX=(W-total_w)/2;
-    const maxH=H-40;
+    const startX=Math.max(10,(W-total_w)/2);
+    const chartBottom=H-40;
+    const maxH=chartBottom-30;
 
     n===0 || [empirical, stationary].forEach((vals,series)=>{
       vals.forEach((v,i)=>{
         const x=startX+(bw*2+gap)*i+(series===1?bw:0);
         const h=v*maxH;
         ctx.fillStyle=series===0?STATE_COLORS[i%STATE_COLORS.length]+'aa':'rgba(255,255,255,.15)';
-        ctx.fillRect(x,H-30-h,bw,h);
+        ctx.fillRect(x,chartBottom-h,bw,h);
       });
     });
 
     // Labels
     ctx.font='11px Space Mono';
     ctx.textAlign='center';
-    this.current.names.forEach((name,i)=>{
+    this.current.short.forEach((label,i)=>{
       const x=startX+(bw*2+gap)*i+bw;
       ctx.fillStyle=STATE_COLORS[i%STATE_COLORS.length];
-      ctx.fillText(name.split(' ')[0],x,H-12);
-      ctx.fillStyle='rgba(255,255,255,.6)';
-      ctx.fillText((empirical[i]*100).toFixed(0)+'%',x,H-30-empirical[i]*maxH-5);
+      ctx.fillText(label+' '+(empirical[i]*100).toFixed(0)+'%',x,chartBottom+16);
     });
 
     // Legend
     ctx.font='10px Space Mono';
     ctx.textAlign='left';
     ctx.fillStyle=STATE_COLORS[0]+'aa'; ctx.fillRect(10,10,12,12);
-    ctx.fillStyle='var(--text2)'; ctx.fillStyle='#9aa3bc'; ctx.fillText('Empírico',26,20);
+    ctx.fillStyle='#9aa3bc'; ctx.fillText('Empírico',26,20);
     ctx.fillStyle='rgba(255,255,255,.15)'; ctx.fillRect(100,10,12,12);
     ctx.fillStyle='#9aa3bc'; ctx.fillText('Estacionario',116,20);
   },
@@ -752,7 +757,7 @@ const Simulator = {
     const svg=document.getElementById('simDiagram');
     if(!svg) return;
     const n=this.current.P.length, names=this.current.names;
-    const W=500,H=300,R=36,cx=W/2,cy=H/2,rad=110;
+    const W=540,H=440,R=36,cx=W/2,cy=H/2,rad=115;
     const pts=Array.from({length:n},(_,i)=>({
       x:cx+rad*Math.cos(2*Math.PI*i/n-Math.PI/2),
       y:cy+rad*Math.sin(2*Math.PI*i/n-Math.PI/2)
@@ -793,8 +798,8 @@ const Simulator = {
       const isAct=i===active;
       nodes+=`<circle cx="${x}" cy="${y}" r="${R}" fill="${isAct?col+'33':'#0a0c12'}" stroke="${col}" stroke-width="${isAct?3:1.5}"/>
         ${isAct?`<circle cx="${x}" cy="${y}" r="${R+8}" fill="none" stroke="${col}" stroke-width="1.5" opacity=".3"/>`:``}
-        <text x="${x}" y="${y-4}" text-anchor="middle" font-size="13" fill="${col}" font-family="Syne,sans-serif" font-weight="700">${names[i].split(' ')[0]}</text>
-        <text x="${x}" y="${y+12}" text-anchor="middle" font-size="9" fill="${col}99" font-family="Space Mono">${names[i].split(' ')[1]||''}</text>`;
+        <text x="${x}" y="${y-4}" text-anchor="middle" font-size="13" fill="${col}" font-family="Syne,sans-serif" font-weight="700">${this.current.short[i]}</text>
+        <text x="${x}" y="${y+12}" text-anchor="middle" font-size="9" fill="${col}99" font-family="Space Mono">${names[i]}</text>`;
     });
 
     svg.innerHTML=defs+edges+nodes;
@@ -804,11 +809,11 @@ const Simulator = {
     this.running=!this.running;
     const btn=document.getElementById('simAuto');
     if(this.running){
-      btn.textContent='⏸ Pausar';
+      btn.innerHTML='<i class="fa-solid fa-pause"></i> Pausar';
       const speed=+document.getElementById('simSpeed').value;
       this.timer=setInterval(()=>this.doStep(),speed);
     } else {
-      btn.textContent='▶ Auto';
+      btn.innerHTML='<i class="fa-solid fa-play"></i> Auto';
       clearInterval(this.timer);
     }
   }
@@ -838,7 +843,7 @@ const NStepsModule = {
     for(let i=0;i<this.size;i++){
       html+=`<tr><th>${names[i]}</th>`;
       for(let j=0;j<this.size;j++) html+=`<td><input class="matrix-input" type="number" min="0" max="1" step="0.01"
-        data-ni="${i}" data-nj="${j}" value="" placeholder="0" style="width:3.5rem"/></td>`;
+        data-ni="${i}" data-nj="${j}" value="" placeholder="0" /></td>`;
       html+='</tr>';
     }
     html+='</tbody></table></div>';
@@ -927,7 +932,7 @@ const NStepsModule = {
 
 const appData = {
   clima: {
-    title:'🌤️ Predicción Climática — Cartagena',
+    title:'Predicción Climática — Cartagena',
     sector:'Meteorología',
     desc:`En Cartagena, el clima tiene tres estados principales: Soleado (S), Nublado (N) y Lluvioso (L). 
     Gracias a registros históricos, se estimó la siguiente matriz de transición diaria:`,
@@ -939,7 +944,7 @@ const appData = {
     useCase:'Planificación turística, logística portuaria, gestión de eventos al aire libre.'
   },
   mercado: {
-    title:'📈 Análisis de Mercado — Bolsa de Colombia',
+    title:'Análisis de Mercado — Bolsa de Colombia',
     sector:'Finanzas',
     desc:'Se modelan los estados del mercado bursátil colombiano como Alcista (A), Estable (E) y Bajista (B) con la siguiente matriz de transición semanal:',
     matrix:[[.6,.3,.1],[.15,.7,.15],[.1,.3,.6]],
@@ -948,7 +953,7 @@ const appData = {
     useCase:'Gestión de portafolios, análisis de riesgo, estrategias de trading sistemático.'
   },
   cliente: {
-    title:'🛒 Fidelización de Clientes — Retail',
+    title:'Fidelización de Clientes — Retail',
     sector:'Mercadeo',
     desc:'Una cadena retail colombiana clasifica sus clientes en Activo (A), En riesgo (R) y Perdido (P). La matriz de transición mensual es:',
     matrix:[[.7,.2,.1],[.3,.5,.2],[.05,.15,.8]],
@@ -957,7 +962,7 @@ const appData = {
     useCase:'CRM, programas de fidelización, estrategias de recuperación de clientes.'
   },
   salud: {
-    title:'🏥 Modelo Epidemiológico SIR',
+    title:'Modelo Epidemiológico SIR',
     sector:'Salud Pública',
     desc:'El modelo SIR clasifica a la población en Susceptible (S), Infectado (I) y Recuperado (R). Aplicado a una enfermedad con tasa de contagio moderada en Colombia:',
     matrix:[[.85,.14,.01],[.0,.65,.35],[.02,.0,.98]],
@@ -966,7 +971,7 @@ const appData = {
     useCase:'Políticas de vacunación, planificación hospitalaria, control de epidemias.'
   },
   inventario: {
-    title:'📦 Control de Inventario',
+    title:'Control de Inventario',
     sector:'Logística',
     desc:'Un centro de distribución colombiano modela el nivel de inventario en tres estados: Alto (A), Normal (N), Bajo (B):',
     matrix:[[.7,.2,.1],[.3,.5,.2],[.4,.4,.2]],
@@ -975,7 +980,7 @@ const appData = {
     useCase:'Políticas de reorden, optimización de almacenes, cadenas de suministro.'
   },
   demografico: {
-    title:'👥 Movilidad Social en Colombia',
+    title:'Movilidad Social en Colombia',
     sector:'Demografía',
     desc:'Se modela la movilidad entre estratos socioeconómicos (bajo, medio, alto) en Colombia con datos quinquenales:',
     matrix:[[.75,.22,.03],[.15,.7,.15],[.02,.18,.8]],
@@ -1092,9 +1097,9 @@ function initQuiz() {
           score.className='quiz-score';
           score.innerHTML=`<div class="quiz-score-num">${correct}/${quizData.length}</div>
             <p style="color:var(--text2)">
-              ${correct===quizData.length?'¡Perfecto! Dominas las Cadenas de Markov 🎉':
-                correct>=quizData.length*.7?'¡Muy bien! Sólida comprensión del tema 👍':
-                '¡Buen intento! Repasa los conceptos y vuelve a intentarlo 📚'}
+              ${correct===quizData.length?'¡Perfecto! Dominas las Cadenas de Markov':
+                correct>=quizData.length*.7?'¡Muy bien! Sólida comprensión del tema':
+                '¡Buen intento! Repasa los conceptos y vuelve a intentarlo'}
             </p>`;
           container.appendChild(score);
         }
@@ -1160,14 +1165,17 @@ function initNav() {
   const navbar=document.getElementById('navbar');
   const toggle=document.getElementById('navToggle');
   const links=document.querySelector('.nav-links');
+  const backBtn=document.getElementById('backToTop');
   if(!navbar) return;
 
   window.addEventListener('scroll',()=>{
     navbar.classList.toggle('scrolled',window.scrollY>50);
+    if(backBtn) backBtn.classList.toggle('visible',window.scrollY>600);
   });
 
   toggle.addEventListener('click',()=>links.classList.toggle('open'));
   links.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>links.classList.remove('open')));
+  if(backBtn) backBtn.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 }
 
 // ─── MÓDULO: REVEAL ANIMATIONS ────────────────────────────────────────────────
