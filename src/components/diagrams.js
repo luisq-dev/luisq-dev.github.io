@@ -1,5 +1,13 @@
 import { getStateColors } from "../data/content.js";
 import { createSvgElement, setSvgAccessibleName } from "../utils/svg.js";
+import {
+  createDiagramLabel,
+  createSelfLoop,
+  edgeGeometry,
+  offsetPoint,
+  quadraticPoint,
+  resolveLabelCollisions,
+} from "../utils/diagram.js";
 
 function addMarkers(defs, idPrefix, colors) {
   colors.forEach((color, index) => {
@@ -10,7 +18,7 @@ function addMarkers(defs, idPrefix, colors) {
       refX: 7,
       refY: 4,
       orient: "auto",
-      markerUnits: "strokeWidth",
+      markerUnits: "userSpaceOnUse",
     });
     marker.append(
       createSvgElement("path", { d: "M0,0 L8,4 L0,8 Z", fill: color }),
@@ -19,27 +27,14 @@ function addMarkers(defs, idPrefix, colors) {
   });
 }
 
-function edgeGeometry(from, to, radius, bend) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const distance = Math.hypot(dx, dy) || 1;
-  const nx = dx / distance;
-  const ny = dy / distance;
-  const offsetX = -ny * bend;
-  const offsetY = nx * bend;
-  const start = {
-    x: from.x + nx * radius + offsetX,
-    y: from.y + ny * radius + offsetY,
-  };
-  const end = {
-    x: to.x - nx * radius + offsetX,
-    y: to.y - ny * radius + offsetY,
-  };
-  const middle = {
-    x: (start.x + end.x) / 2 + offsetX * 0.35,
-    y: (start.y + end.y) / 2 + offsetY * 0.35,
-  };
-  return { start, end, middle };
+function edgeLabelPoint(start, control, end, direction) {
+  const point = quadraticPoint(
+    start,
+    control,
+    end,
+    direction > 0 ? 0.38 : 0.52,
+  );
+  return offsetPoint(point, start, end, 12);
 }
 
 export function renderCircularDiagram(svg, matrix, names, options = {}) {
@@ -49,16 +44,15 @@ export function renderCircularDiagram(svg, matrix, names, options = {}) {
   const height = options.height ?? 460;
   const radius = options.radius ?? 32;
   const ringRadius = options.ringRadius ?? (size <= 3 ? 145 : 170);
-  const centerX = width / 2;
-  const centerY = height / 2;
+  const center = { x: width / 2, y: height / 2 };
   const colors = options.colors ?? getStateColors();
   const activeState = options.activeState;
   const points = Array.from({ length: size }, (_, index) => ({
     x:
-      centerX +
+      center.x +
       ringRadius * Math.cos((2 * Math.PI * index) / size - Math.PI / 2),
     y:
-      centerY +
+      center.y +
       ringRadius * Math.sin((2 * Math.PI * index) / size - Math.PI / 2),
   }));
 
@@ -77,76 +71,72 @@ export function renderCircularDiagram(svg, matrix, names, options = {}) {
   );
   svg.append(defs);
 
-  const edgeLayer = createSvgElement("g", { class: "diagram-edges" });
+  const edges = [];
   for (let row = 0; row < size; row += 1) {
     for (let column = 0; column < size; column += 1) {
       const probability = matrix[row][column];
-      if (probability < 0.0005) continue;
+      if (!Number.isFinite(probability) || probability < 0.0005) continue;
       const color = colors[row % colors.length];
       const isActive =
         activeState === undefined ||
         row === activeState ||
         column === activeState;
       const stroke = isActive ? color : "var(--border2)";
+      const labelFill = isActive ? color : "var(--text-secondary)";
       const marker = `${svg.id}-${isActive ? "default" : "muted"}-${row % colors.length}`;
 
       if (row === column) {
-        const point = points[row];
-        edgeLayer.append(
-          createSvgElement("path", {
-            d: `M${point.x - 12},${point.y - radius - 3} C${point.x - 42},${point.y - radius - 54} ${point.x + 42},${point.y - radius - 54} ${point.x + 12},${point.y - radius - 3}`,
-            fill: "none",
-            stroke,
-            "stroke-width": Math.max(1.2, probability * 4),
-            opacity: isActive ? 0.95 : 0.35,
-            "marker-end": `url(#${marker})`,
-          }),
-          createSvgElement(
-            "text",
-            {
-              x: point.x,
-              y: point.y - radius - 43,
-              "text-anchor": "middle",
-              class: "diagram-edge-label",
-              fill: stroke,
-            },
-            probability.toFixed(2),
-          ),
-        );
+        const loop = createSelfLoop({
+          point: points[row],
+          center,
+          radius,
+          probability,
+          stroke,
+          marker,
+          active: isActive,
+          labelFill,
+        });
+        edges.push({
+          active: isActive,
+          path: loop.pathGroup,
+          label: loop.label,
+        });
         continue;
       }
 
-      const bend = row < column ? 18 : -18;
-      const { start, end, middle } = edgeGeometry(
+      const direction = row < column ? 1 : -1;
+      const bend = direction * (size <= 3 ? 38 : 46);
+      const { start, end, control } = edgeGeometry(
         points[row],
         points[column],
         radius,
         bend,
       );
-      edgeLayer.append(
-        createSvgElement("path", {
-          d: `M${start.x},${start.y} Q${middle.x},${middle.y} ${end.x},${end.y}`,
-          fill: "none",
-          stroke,
-          "stroke-width": Math.max(1.2, probability * 4),
-          opacity: isActive ? 0.95 : 0.3,
-          "marker-end": `url(#${marker})`,
+      const labelPoint = edgeLabelPoint(start, control, end, direction);
+      const path = createSvgElement("path", {
+        d: `M${start.x},${start.y} Q${control.x},${control.y} ${end.x},${end.y}`,
+        fill: "none",
+        stroke,
+        "stroke-width": Math.max(1.2, probability * 4),
+        opacity: isActive ? 0.95 : 0.38,
+        "marker-end": `url(#${marker})`,
+      });
+      edges.push({
+        active: isActive,
+        path,
+        label: createDiagramLabel(probability.toFixed(2), labelPoint, {
+          fill: labelFill,
+          opacity: isActive ? 1 : 0.72,
         }),
-        createSvgElement(
-          "text",
-          {
-            x: middle.x,
-            y: middle.y - 5,
-            "text-anchor": "middle",
-            class: "diagram-edge-label",
-            fill: stroke,
-            opacity: isActive ? 1 : 0.6,
-          },
-          probability.toFixed(2),
-        ),
-      );
+      });
     }
   }
+
+  // Draw inactive transitions first so the active state remains readable.
+  edges.sort((first, second) => Number(first.active) - Number(second.active));
+  const edgeLayer = createSvgElement("g", { class: "diagram-edges" });
+  edges.forEach(({ path, label }) => edgeLayer.append(path, label));
+  resolveLabelCollisions(edgeLayer);
   svg.append(edgeLayer);
 
   const nodeLayer = createSvgElement("g", { class: "diagram-nodes" });
@@ -187,7 +177,7 @@ export function renderCircularDiagram(svg, matrix, names, options = {}) {
             y: point.y + 14,
             "text-anchor": "middle",
             class: "diagram-node-name",
-            fill: "var(--text2)",
+            fill: "var(--text-secondary)",
           },
           names[index],
         ),

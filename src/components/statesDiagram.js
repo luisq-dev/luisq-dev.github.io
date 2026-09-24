@@ -1,8 +1,16 @@
 import { getStateColors } from "../data/content.js";
 import { createSvgElement, setSvgAccessibleName } from "../utils/svg.js";
+import {
+  createDiagramLabel,
+  createSelfLoop,
+  edgeGeometry,
+  offsetPoint,
+  quadraticPoint,
+  resolveLabelCollisions,
+} from "../utils/diagram.js";
 
 const stateColors = getStateColors();
-
+const center = { x: 260, y: 200 };
 const nodes = [
   {
     id: "S1",
@@ -85,30 +93,6 @@ const descriptions = {
     "La clase cerrada C = {S₄, S₅, S₆} es irreducible y aperiódica: restringida a C, la cadena es ergódica y tiene una distribución estacionaria única. La cadena completa es reducible.",
 };
 
-function curve(from, to, bend) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const distance = Math.hypot(dx, dy) || 1;
-  const nx = dx / distance;
-  const ny = dy / distance;
-  const radius = 25;
-  const offsetX = -ny * bend;
-  const offsetY = nx * bend;
-  const start = {
-    x: from.x + nx * radius + offsetX,
-    y: from.y + ny * radius + offsetY,
-  };
-  const end = {
-    x: to.x - nx * radius + offsetX,
-    y: to.y - ny * radius + offsetY,
-  };
-  const middle = {
-    x: (start.x + end.x) / 2 + offsetX * 0.45,
-    y: (start.y + end.y) / 2 + offsetY * 0.45,
-  };
-  return { start, end, middle };
-}
-
 function isHighlighted(edge, selection) {
   if (!selection) return false;
   if (selection === "ergodica" || selection === "periodo") {
@@ -130,14 +114,7 @@ function isNodeHighlighted(node, selection) {
   return node.type === selection;
 }
 
-function render(svg, selection) {
-  setSvgAccessibleName(
-    svg,
-    "Diagrama de estados y clases de comunicación",
-    "S₁ es absorbente; S₂ y S₃ son transitorios; S₄, S₅ y S₆ forman una clase cerrada ergódica.",
-  );
-
-  const defs = createSvgElement("defs");
+function addMarkers(defs) {
   ["var(--text3)", "var(--accent)"].forEach((color, index) => {
     const marker = createSvgElement("marker", {
       id: `states-arrow-${index}`,
@@ -146,75 +123,88 @@ function render(svg, selection) {
       refX: 7,
       refY: 4,
       orient: "auto",
+      markerUnits: "userSpaceOnUse",
     });
     marker.append(
       createSvgElement("path", { d: "M0,0 L8,4 L0,8 Z", fill: color }),
     );
     defs.append(marker);
   });
+}
+
+function render(svg, selection) {
+  setSvgAccessibleName(
+    svg,
+    "Diagrama de estados y clases de comunicación",
+    "S₁ es absorbente; S₂ y S₃ son transitorios; S₄, S₅ y S₆ forman una clase cerrada ergódica.",
+  );
+
+  const defs = createSvgElement("defs");
+  addMarkers(defs);
   svg.append(defs);
 
-  const edgeLayer = createSvgElement("g");
+  const edgeEntries = [];
   edges.forEach((edge) => {
     const from = nodes.find((node) => node.id === edge.from);
     const to = nodes.find((node) => node.id === edge.to);
-    const highlighted = isHighlighted(edge, selection);
-    const stroke = highlighted ? "var(--accent)" : "var(--border)";
-    const marker = highlighted ? "states-arrow-1" : "states-arrow-0";
+    const active = isHighlighted(edge, selection);
+    const stroke = active ? "var(--accent)" : "var(--border)";
+    const labelFill = active ? "var(--accent)" : "var(--text-secondary)";
+    const marker = active ? "states-arrow-1" : "states-arrow-0";
 
     if (edge.from === edge.to) {
-      edgeLayer.append(
-        createSvgElement("path", {
-          d: `M${from.x - 10},${from.y - 24} C${from.x - 34},${from.y - 62} ${from.x + 34},${from.y - 62} ${from.x + 10},${from.y - 24}`,
-          fill: "none",
-          stroke,
-          "stroke-width": highlighted ? 2 : 1,
-          "marker-end": `url(#${marker})`,
-        }),
-        createSvgElement(
-          "text",
-          {
-            x: from.x,
-            y: from.y - 52,
-            "text-anchor": "middle",
-            class: "diagram-edge-label",
-            fill: stroke,
-          },
-          edge.value.toFixed(1),
-        ),
-      );
+      const loop = createSelfLoop({
+        point: from,
+        center,
+        radius: 25,
+        probability: edge.value,
+        stroke,
+        marker,
+        active,
+        labelFill,
+      });
+      edgeEntries.push({ active, path: loop.pathGroup, label: loop.label });
       return;
     }
 
-    const { start, end, middle } = curve(from, to, from.id < to.id ? 18 : -18);
-    edgeLayer.append(
-      createSvgElement("path", {
-        d: `M${start.x},${start.y} Q${middle.x},${middle.y} ${end.x},${end.y}`,
+    const direction = from.x < to.x || from.y < to.y ? 1 : -1;
+    const bend = direction * 28;
+    const { start, end, control } = edgeGeometry(from, to, 25, bend);
+    const labelPoint = offsetPoint(
+      quadraticPoint(start, control, end, direction > 0 ? 0.4 : 0.52),
+      start,
+      end,
+      10,
+    );
+    edgeEntries.push({
+      active,
+      path: createSvgElement("path", {
+        d: `M${start.x},${start.y} Q${control.x},${control.y} ${end.x},${end.y}`,
         fill: "none",
         stroke,
-        "stroke-width": highlighted ? 2 : 1,
-        opacity: highlighted ? 1 : 0.65,
+        "stroke-width": active ? 2 : 1,
+        opacity: active ? 1 : 0.65,
         "marker-end": `url(#${marker})`,
       }),
-      createSvgElement(
-        "text",
-        {
-          x: middle.x,
-          y: middle.y - 4,
-          "text-anchor": "middle",
-          class: "diagram-edge-label",
-          fill: stroke,
-        },
-        edge.value.toFixed(1),
-      ),
-    );
+      label: createDiagramLabel(edge.value.toFixed(1), labelPoint, {
+        fill: labelFill,
+        opacity: active ? 1 : 0.72,
+      }),
+    });
   });
+
+  edgeEntries.sort(
+    (first, second) => Number(first.active) - Number(second.active),
+  );
+  const edgeLayer = createSvgElement("g", { class: "diagram-edges" });
+  edgeEntries.forEach(({ path, label }) => edgeLayer.append(path, label));
+  resolveLabelCollisions(edgeLayer, 4);
   svg.append(edgeLayer);
 
-  const nodeLayer = createSvgElement("g");
+  const nodeLayer = createSvgElement("g", { class: "diagram-nodes" });
   nodes.forEach((node) => {
     const highlighted = isNodeHighlighted(node, selection);
-    const color = highlighted ? node.color : "var(--text2)";
+    const color = highlighted ? node.color : "var(--text-secondary)";
     nodeLayer.append(
       createSvgElement("circle", {
         cx: node.x,

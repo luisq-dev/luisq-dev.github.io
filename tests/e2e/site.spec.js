@@ -56,6 +56,28 @@ test("carga sin errores de consola y cumple las reglas WCAG AA", async ({
   expect(errors).toEqual([]);
 });
 
+test("los editores de matrices aceptan coma decimal y muestran los valores", async ({
+  page,
+}) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/#matriz");
+  await fillMatrix(page, "#matrixInputArea", [
+    ["0,6", "0,3", "0,1"],
+    ["0,2", "0,5", "0,3"],
+    ["0,4", "0,1", "0,5"],
+  ]);
+  await expect(page.locator("#matrixValidation")).toContainText(
+    "Matriz válida",
+  );
+  await expect(page.locator("#matrixInputArea input").first()).toHaveValue(
+    "0,6",
+  );
+  await page.getByRole("button", { name: "Calcular P² y P³" }).click();
+  await expect(page.locator("#matrixResults")).toContainText("P² (dos pasos)");
+  expect(pageErrors).toEqual([]);
+});
+
 test("la demo de Markov responde con controles nativos", async ({ page }) => {
   await page.goto("/#concepto");
   await page.locator("#pathStep").click();
@@ -75,6 +97,46 @@ test("las tarjetas de estados funcionan con teclado", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(recurrent).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#diagramLegend")).toContainText("S₄, S₅ y S₆");
+});
+
+test("los diagramas separan sus etiquetas y probabilidades", async ({
+  page,
+}) => {
+  await page.goto("/#simulador");
+  for (const selector of [
+    "#simDiagram",
+    "#transitionDiagram",
+    "#statesDiagram",
+  ]) {
+    const overlapCount = await page.locator(selector).evaluate((svg) => {
+      const labels = [...svg.querySelectorAll(".diagram-edge-label-group")].map(
+        (group) => {
+          const rect = group.getBoundingClientRect();
+          return {
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+          };
+        },
+      );
+      let overlaps = 0;
+      labels.forEach((first, index) => {
+        labels.slice(index + 1).forEach((second) => {
+          if (
+            first.left < second.right &&
+            first.right > second.left &&
+            first.top < second.bottom &&
+            first.bottom > second.top
+          ) {
+            overlaps += 1;
+          }
+        });
+      });
+      return overlaps;
+    });
+    expect(overlapCount, selector).toBe(0);
+  }
 });
 
 test("la calculadora estacionaria informa cuando no hay unicidad", async ({

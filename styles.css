@@ -903,22 +903,30 @@ label {
   font-family: var(--font-mono);
 }
 
+.diagram-edges path {
+  vector-effect: non-scaling-stroke;
+}
+
 .diagram-edge-label {
-  font-size: 9px;
+  font-size: 10px;
   paint-order: stroke;
   stroke: var(--surface);
-  stroke-width: 3px;
+  stroke-width: 2px;
   stroke-linejoin: round;
+}
+
+.diagram-edge-label-group {
+  pointer-events: none;
 }
 
 .diagram-node-label {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
 }
 
 .diagram-node-name {
-  font-size: 8px;
+  font-size: 9px;
 }
 
 /* Matrix tools */
@@ -1035,16 +1043,28 @@ label {
 }
 
 .matrix-input {
-  width: 4.25rem;
-  min-height: 2.5rem;
-  padding: 0.4rem 0.45rem;
+  width: 5rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.55rem;
   border: 1.5px solid var(--border);
   border-radius: 6px;
+  appearance: textfield;
   background: var(--bg);
   color: var(--text);
+  caret-color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
   text-align: center;
+  -webkit-text-fill-color: var(--text);
+}
+
+.matrix-input::-webkit-inner-spin-button,
+.matrix-input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
 }
 
 .matrix-input.error {

@@ -8,6 +8,11 @@ import {
 const stateNames = (size) =>
   Array.from({ length: size }, (_, index) => String.fromCharCode(65 + index));
 
+const parseDecimal = (value) => {
+  const normalized = String(value).trim().replace(",", ".");
+  return normalized === "" ? 0 : Number(normalized);
+};
+
 export class MatrixEditor {
   constructor({
     inputArea,
@@ -75,16 +80,16 @@ export class MatrixEditor {
           className: "matrix-input",
           attributes: {
             id: inputId,
-            type: "number",
-            min: "0",
-            max: "1",
-            step: "0.01",
+            type: "text",
             inputmode: "decimal",
-            "aria-label": `Probabilidad de transición de ${from} hacia ${to}`,
+            pattern: "[0-9]*[.,]?[0-9]*",
+            maxlength: "5",
+            autocomplete: "off",
+            spellcheck: "false",
+            "aria-label": `Probabilidad de transición de ${from} hacia ${to}. Usa punto o coma decimal.`,
           },
         });
         input.addEventListener("input", () => {
-          this.updateRowState(rowIndex);
           this.notify();
         });
         cell.append(input);
@@ -124,7 +129,7 @@ export class MatrixEditor {
           `#${CSS.escape(`${this.idPrefix}-${rowIndex}-${columnIndex}`)}`,
         );
         if (!input || input.value.trim() === "") return 0;
-        return Number(input.value);
+        return parseDecimal(input.value);
       }),
     );
   }
@@ -181,7 +186,7 @@ export class MatrixEditor {
     inputs.forEach((input) => {
       const rowIndex = Number(input.id.split("-").at(-2));
       const columnIndex = Number(input.id.split("-").at(-1));
-      const value = Number(input.value);
+      const value = parseDecimal(input.value);
       const invalidProbability =
         input.value !== "" &&
         (!Number.isFinite(value) || value < 0 || value > 1);
