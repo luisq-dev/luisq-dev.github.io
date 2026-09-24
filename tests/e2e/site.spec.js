@@ -103,11 +103,7 @@ test("los diagramas separan sus etiquetas y probabilidades", async ({
   page,
 }) => {
   await page.goto("/#simulador");
-  for (const selector of [
-    "#simDiagram",
-    "#transitionDiagram",
-    "#statesDiagram",
-  ]) {
+  for (const selector of ["#simDiagram", "#transitionDiagram"]) {
     const overlapCount = await page.locator(selector).evaluate((svg) => {
       const labels = [...svg.querySelectorAll(".diagram-edge-label-group")].map(
         (group) => {
@@ -137,6 +133,82 @@ test("los diagramas separan sus etiquetas y probabilidades", async ({
     });
     expect(overlapCount, selector).toBe(0);
   }
+});
+
+test("cada transición conserva su arista, etiqueta y flecha", async ({
+  page,
+}) => {
+  await page.goto("/#matriz");
+  await fillMatrix(page, "#matrixInputArea", [
+    ["0.60", "0.10", "0.30"],
+    ["0.40", "0.50", "0.10"],
+    ["0.20", "0.30", "0.50"],
+  ]);
+
+  const expected = [
+    [0, 0, 0.6, "0.60"],
+    [0, 1, 0.1, "0.10"],
+    [0, 2, 0.3, "0.30"],
+    [1, 0, 0.4, "0.40"],
+    [1, 1, 0.5, "0.50"],
+    [1, 2, 0.1, "0.10"],
+    [2, 0, 0.2, "0.20"],
+    [2, 1, 0.3, "0.30"],
+    [2, 2, 0.5, "0.50"],
+  ];
+  const edges = await page
+    .locator("#transitionDiagram .diagram-edge")
+    .evaluateAll((groups) =>
+      groups
+        .map((group) => ({
+          key: `${group.dataset.fromIndex}-${group.dataset.toIndex}`,
+          probability: Number(group.dataset.probability),
+          label: group.querySelector("text")?.textContent,
+          path: group.querySelector("path[id]")?.getAttribute("d"),
+          hasArrowhead: Boolean(group.querySelector(".diagram-arrowhead")),
+          hasLeader: Boolean(group.querySelector(".diagram-label-leader")),
+        }))
+        .sort((first, second) => first.key.localeCompare(second.key)),
+    );
+  expect(edges).toHaveLength(9);
+  expected.forEach(([from, to, probability, label]) => {
+    const edge = edges.find((candidate) => candidate.key === `${from}-${to}`);
+    expect(edge).toMatchObject({
+      probability,
+      label,
+      hasArrowhead: true,
+      hasLeader: true,
+    });
+    expect(edge?.path).toBeTruthy();
+  });
+
+  const paths = Object.fromEntries(edges.map((edge) => [edge.key, edge.path]));
+  expect(paths["0-1"]).not.toBe(paths["1-0"]);
+  expect(paths["0-2"]).not.toBe(paths["2-0"]);
+  expect(paths["1-2"]).not.toBe(paths["2-1"]);
+
+  const overlapCount = await page
+    .locator("#transitionDiagram")
+    .evaluate((svg) => {
+      const labels = [...svg.querySelectorAll(".diagram-edge-label-group")].map(
+        (group) => group.getBoundingClientRect(),
+      );
+      let overlaps = 0;
+      labels.forEach((first, index) => {
+        labels.slice(index + 1).forEach((second) => {
+          if (
+            first.left < second.right &&
+            first.right > second.left &&
+            first.top < second.bottom &&
+            first.bottom > second.top
+          ) {
+            overlaps += 1;
+          }
+        });
+      });
+      return overlaps;
+    });
+  expect(overlapCount).toBe(0);
 });
 
 test("la calculadora estacionaria informa cuando no hay unicidad", async ({

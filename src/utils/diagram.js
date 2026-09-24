@@ -1,64 +1,123 @@
 import { createSvgElement } from "./svg.js";
 
-export function edgeGeometry(from, to, radius, bend) {
+function addNumber(value) {
+  return Number(value.toFixed(2));
+}
+
+function point(x, y) {
+  return { x, y };
+}
+
+function addPoints(first, second) {
+  return point(addNumber(first.x + second.x), addNumber(first.y + second.y));
+}
+
+function multiplyPoint(value, amount) {
+  return point(addNumber(value.x * amount), addNumber(value.y * amount));
+}
+
+function cubicPoint(start, control1, control2, end, amount) {
+  const inverse = 1 - amount;
+  return point(
+    addNumber(
+      inverse ** 3 * start.x +
+        3 * inverse ** 2 * amount * control1.x +
+        3 * inverse * amount ** 2 * control2.x +
+        amount ** 3 * end.x,
+    ),
+    addNumber(
+      inverse ** 3 * start.y +
+        3 * inverse ** 2 * amount * control1.y +
+        3 * inverse * amount ** 2 * control2.y +
+        amount ** 3 * end.y,
+    ),
+  );
+}
+
+function cubicPathData(start, control1, control2, end) {
+  return `M${start.x},${start.y} C${control1.x},${control1.y} ${control2.x},${control2.y} ${end.x},${end.y}`;
+}
+
+export function pairNormal(first, second) {
+  const dx = second.x - first.x;
+  const dy = second.y - first.y;
+  const distance = Math.hypot(dx, dy) || 1;
+  return point(-dy / distance, dx / distance);
+}
+
+// The normal is calculated once for an unordered pair of nodes. Reversing an
+// edge therefore changes the offset sign without flipping the normal again.
+export function edgeGeometry(from, to, radius, normal, offset) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const distance = Math.hypot(dx, dy) || 1;
-  const nx = dx / distance;
-  const ny = dy / distance;
-  const offsetX = -ny * bend;
-  const offsetY = nx * bend;
-  const start = {
-    x: from.x + nx * radius + offsetX,
-    y: from.y + ny * radius + offsetY,
-  };
-  const end = {
-    x: to.x - nx * radius + offsetX,
-    y: to.y - ny * radius + offsetY,
-  };
-  const control = {
-    x: (start.x + end.x) / 2 + offsetX * 0.55,
-    y: (start.y + end.y) / 2 + offsetY * 0.55,
-  };
-  return { start, end, control };
+  const direction = point(dx / distance, dy / distance);
+  const start = addPoints(from, multiplyPoint(direction, radius));
+  const end = addPoints(to, multiplyPoint(direction, -(radius + 10)));
+  const controlOffset = multiplyPoint(normal, offset);
+  const control1 = addPoints(
+    start,
+    addPoints(multiplyPoint(direction, distance * 0.28), controlOffset),
+  );
+  const control2 = addPoints(
+    end,
+    addPoints(multiplyPoint(direction, -distance * 0.28), controlOffset),
+  );
+  return { start, end, control1, control2, normal, offset };
 }
 
-export function quadraticPoint(start, control, end, amount = 0.5) {
-  const inverse = 1 - amount;
+// Labels are sampled from the same cubic path as their transition. The short
+// leader preserves that relationship when the label is offset for legibility.
+export function labelPlacement({
+  geometry,
+  normal,
+  offset,
+  labelOffset = 14,
+  labelAmount = 0.5,
+}) {
+  const anchor = cubicPoint(
+    geometry.start,
+    geometry.control1,
+    geometry.control2,
+    geometry.end,
+    labelAmount,
+  );
   return {
-    x:
-      inverse * inverse * start.x +
-      2 * inverse * amount * control.x +
-      amount * amount * end.x,
-    y:
-      inverse * inverse * start.y +
-      2 * inverse * amount * control.y +
-      amount * amount * end.y,
+    anchor,
+    position: addPoints(
+      anchor,
+      multiplyPoint(normal, labelOffset * Math.sign(offset || 1)),
+    ),
   };
 }
 
-export function offsetPoint(point, start, end, amount) {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const distance = Math.hypot(dx, dy) || 1;
-  return {
-    x: point.x + (-dy / distance) * amount,
-    y: point.y + (dx / distance) * amount,
-  };
+function addEdgeMetadata(element, metadata) {
+  Object.entries(metadata).forEach(([name, value]) => {
+    if (value !== undefined && value !== null) {
+      element.setAttribute(`data-${name}`, String(value));
+    }
+  });
 }
 
-export function createDiagramLabel(text, point, options = {}) {
+export function createPointLabel({
+  text,
+  position,
+  fill = "var(--text-secondary)",
+  opacity = 1,
+  metadata = {},
+}) {
   const label = String(text);
   const width = Math.max(34, label.length * 7 + 12);
   const group = createSvgElement("g", {
     class: "diagram-edge-label-group",
-    transform: `translate(${point.x} ${point.y})`,
+    transform: `translate(${position.x} ${position.y})`,
     "aria-hidden": "true",
   });
-  group.setAttribute("data-label-x", point.x);
-  group.setAttribute("data-label-y", point.y);
-  group.setAttribute("data-label-width", width);
-  group.setAttribute("data-label-height", 20);
+  addEdgeMetadata(group, {
+    ...metadata,
+    labelX: position.x,
+    labelY: position.y,
+  });
   group.append(
     createSvgElement("rect", {
       x: -width / 2,
@@ -78,8 +137,8 @@ export function createDiagramLabel(text, point, options = {}) {
         y: 4,
         "text-anchor": "middle",
         class: "diagram-edge-label",
-        fill: options.fill ?? "var(--text-secondary)",
-        opacity: options.opacity ?? 1,
+        fill,
+        opacity,
       },
       label,
     ),
@@ -87,91 +146,194 @@ export function createDiagramLabel(text, point, options = {}) {
   return group;
 }
 
-export function resolveLabelCollisions(container, gap = 5) {
-  const groups = [...container.querySelectorAll(".diagram-edge-label-group")];
-  const labels = groups.map((group) => ({
-    group,
-    x: Number(group.getAttribute("data-label-x")),
-    y: Number(group.getAttribute("data-label-y")),
-    width: Number(group.getAttribute("data-label-width")),
-    height: Number(group.getAttribute("data-label-height")),
-  }));
-
-  for (let pass = 0; pass < 40; pass += 1) {
-    let moved = false;
-    for (let firstIndex = 0; firstIndex < labels.length; firstIndex += 1) {
-      for (
-        let secondIndex = firstIndex + 1;
-        secondIndex < labels.length;
-        secondIndex += 1
-      ) {
-        const first = labels[firstIndex];
-        const second = labels[secondIndex];
-        const dx = second.x - first.x;
-        const dy = second.y - first.y;
-        const overlapX = (first.width + second.width) / 2 + gap - Math.abs(dx);
-        const overlapY =
-          (first.height + second.height) / 2 + gap - Math.abs(dy);
-        if (overlapX <= 0 || overlapY <= 0) continue;
-        moved = true;
-        if (overlapX < overlapY) {
-          const direction =
-            dx === 0 ? (secondIndex % 2 ? 1 : -1) : Math.sign(dx);
-          second.x += direction * overlapX;
-        } else {
-          const direction =
-            dy === 0 ? (secondIndex % 2 ? 1 : -1) : Math.sign(dy);
-          second.y += direction * overlapY;
-        }
-      }
-    }
-    if (!moved) break;
-  }
-
-  labels.forEach(({ group, x, y }) => {
-    group.setAttribute("data-label-x", x);
-    group.setAttribute("data-label-y", y);
-    group.setAttribute("transform", `translate(${x} ${y})`);
+function createArrowHead(end, control, fill, opacity) {
+  const dx = end.x - control.x;
+  const dy = end.y - control.y;
+  const distance = Math.hypot(dx, dy) || 1;
+  const direction = point(dx / distance, dy / distance);
+  const perpendicular = point(-direction.y, direction.x);
+  const size = 9;
+  const base = addPoints(end, multiplyPoint(direction, -size));
+  const left = addPoints(base, multiplyPoint(perpendicular, size * 0.55));
+  const right = addPoints(base, multiplyPoint(perpendicular, -size * 0.55));
+  return createSvgElement("path", {
+    class: "diagram-arrowhead",
+    d: `M${end.x},${end.y} L${left.x},${left.y} L${right.x},${right.y} Z`,
+    fill,
+    opacity,
+    "pointer-events": "none",
+    "aria-hidden": "true",
   });
 }
 
+function createLeader(anchor, position, stroke, opacity) {
+  return createSvgElement("path", {
+    class: "diagram-label-leader",
+    d: `M${anchor.x},${anchor.y} L${position.x},${position.y}`,
+    fill: "none",
+    stroke,
+    "stroke-width": 1.2,
+    opacity,
+    "vector-effect": "non-scaling-stroke",
+    "aria-hidden": "true",
+  });
+}
+
+export function createDirectedEdge({
+  id,
+  from,
+  to,
+  radius,
+  normal,
+  offset,
+  probability,
+  label,
+  stroke,
+  width,
+  opacity,
+  labelFill,
+  labelOpacity,
+  labelOffset = 14,
+  labelAmount = 0.5,
+  metadata = {},
+}) {
+  const geometry = edgeGeometry(from, to, radius, normal, offset);
+  const path = createSvgElement("path", {
+    id,
+    d: cubicPathData(
+      geometry.start,
+      geometry.control1,
+      geometry.control2,
+      geometry.end,
+    ),
+    fill: "none",
+    stroke,
+    "stroke-width": width,
+    opacity,
+    "vector-effect": "non-scaling-stroke",
+  });
+  const arrowhead = createArrowHead(
+    geometry.end,
+    geometry.control2,
+    stroke,
+    opacity,
+  );
+  const { anchor, position: labelPosition } = labelPlacement({
+    geometry,
+    normal,
+    offset,
+    labelOffset,
+    labelAmount,
+  });
+  const leader = createLeader(anchor, labelPosition, stroke, opacity * 0.8);
+  const labelElement = createPointLabel({
+    text: label,
+    position: labelPosition,
+    fill: labelFill,
+    opacity: labelOpacity,
+    metadata: {
+      ...metadata,
+      anchorX: anchor.x,
+      anchorY: anchor.y,
+    },
+  });
+  const group = createSvgElement("g", {
+    class: "diagram-edge",
+    "aria-hidden": "true",
+  });
+  addEdgeMetadata(group, {
+    edgeId: id,
+    ...metadata,
+    probability,
+    anchorX: anchor.x,
+    anchorY: anchor.y,
+  });
+  addEdgeMetadata(path, metadata);
+  group.append(path, arrowhead, leader, labelElement);
+  return {
+    group,
+    path,
+    arrowhead,
+    label: labelElement,
+    leader,
+    geometry,
+    anchor,
+  };
+}
+
 export function createSelfLoop({
-  point,
+  id,
+  point: node,
   center,
   radius,
   probability,
+  label,
   stroke,
-  marker,
-  active,
+  width,
+  opacity,
   labelFill,
+  labelOpacity,
+  labelOffset = 18,
+  metadata = {},
 }) {
-  const dx = point.x - center.x;
-  const dy = point.y - center.y;
+  const dx = node.x - center.x;
+  const dy = node.y - center.y;
   const distance = Math.hypot(dx, dy) || 1;
-  const outward = { x: dx / distance, y: dy / distance };
-  const angle = (Math.atan2(outward.y, outward.x) * 180) / Math.PI + 90;
-  const pathGroup = createSvgElement("g", {
-    class: "diagram-self-loop",
-    transform: `translate(${point.x} ${point.y}) rotate(${angle})`,
+  const outward = point(dx / distance, dy / distance);
+  const angle = Math.atan2(outward.y, outward.x) + Math.PI / 2;
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+  const rotate = (value) =>
+    point(
+      addNumber(value.x * cosine - value.y * sine),
+      addNumber(value.x * sine + value.y * cosine),
+    );
+  const start = addPoints(node, rotate(point(-radius * 0.38, -radius + 2)));
+  const control1 = addPoints(
+    node,
+    rotate(point(-radius * 1.25, -radius * 2.05)),
+  );
+  const control2 = addPoints(
+    node,
+    rotate(point(radius * 1.25, -radius * 2.05)),
+  );
+  const end = addPoints(node, rotate(point(radius * 0.38, -radius + 2)));
+  const path = createSvgElement("path", {
+    id,
+    d: cubicPathData(start, control1, control2, end),
+    fill: "none",
+    stroke,
+    "stroke-width": width,
+    opacity,
+    "vector-effect": "non-scaling-stroke",
+  });
+  const arrowhead = createArrowHead(end, control2, stroke, opacity);
+  const anchor = cubicPoint(start, control1, control2, end, 0.5);
+  const labelPosition = addPoints(anchor, multiplyPoint(outward, labelOffset));
+  const leader = createLeader(anchor, labelPosition, stroke, opacity * 0.8);
+  const labelElement = createPointLabel({
+    text: label,
+    position: labelPosition,
+    fill: labelFill,
+    opacity: labelOpacity,
+    metadata: {
+      ...metadata,
+      anchorX: anchor.x,
+      anchorY: anchor.y,
+    },
+  });
+  const group = createSvgElement("g", {
+    class: "diagram-edge diagram-edge-loop",
     "aria-hidden": "true",
   });
-  pathGroup.append(
-    createSvgElement("path", {
-      d: `M${-radius * 0.38},${-radius + 2} C${-radius * 1.25},${-radius * 2.05} ${radius * 1.25},${-radius * 2.05} ${radius * 0.38},${-radius + 2}`,
-      fill: "none",
-      stroke,
-      "stroke-width": Math.max(1.2, probability * 4),
-      opacity: active ? 0.95 : 0.4,
-      "marker-end": `url(#${marker})`,
-    }),
-  );
-  const labelPoint = {
-    x: point.x + outward.x * (radius + 28),
-    y: point.y + outward.y * (radius + 28),
-  };
-  const label = createDiagramLabel(probability.toFixed(2), labelPoint, {
-    fill: labelFill,
-    opacity: active ? 1 : 0.72,
+  addEdgeMetadata(group, {
+    edgeId: id,
+    ...metadata,
+    probability,
+    anchorX: anchor.x,
+    anchorY: anchor.y,
   });
-  return { pathGroup, label };
+  addEdgeMetadata(path, metadata);
+  group.append(path, arrowhead, leader, labelElement);
+  return { group, path, arrowhead, label: labelElement, leader, anchor };
 }
