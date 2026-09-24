@@ -1,0 +1,8 @@
+node_modules
+script.js
+coverage
+playwright-report
+test-results
+package-lock.json
+assets/fonts
+assets/social-preview.png

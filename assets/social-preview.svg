@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0c12"/>
+      <stop offset="1" stop-color="#17142b"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#7b61ff" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#7b61ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="930" cy="110" r="330" fill="url(#glow)"/>
+  <g stroke="#5ce1e6" stroke-opacity=".18" fill="none">
+    <path d="M760 100 1030 250 870 500 1080 410" stroke-width="3"/>
+    <path d="m1030 250 190 160M870 500 50 560" stroke-width="2"/>
+  </g>
+  <g fill="#5ce1e6">
+    <circle cx="760" cy="100" r="10"/><circle cx="1030" cy="250" r="10"/><circle cx="870" cy="500" r="10"/><circle cx="1220" cy="410" r="10"/>
+  </g>
+  <text x="80" y="118" fill="#9aa3bc" font-family="DejaVu Sans, sans-serif" font-size="24" letter-spacing="3">UNIVERSIDAD DE CARTAGENA · INVESTIGACIÓN DE OPERACIONES</text>
+  <text x="80" y="285" fill="#edf1f8" font-family="DejaVu Sans, sans-serif" font-size="94" font-weight="700">Cadenas de</text>
+  <text x="80" y="395" fill="#5ce1e6" font-family="DejaVu Sans, sans-serif" font-size="112" font-weight="700">Markov</text>
+  <text x="84" y="472" fill="#aab3c9" font-family="DejaVu Sans, sans-serif" font-size="31">Guía visual, interactiva y completa</text>
+  <rect x="80" y="525" width="460" height="58" rx="29" fill="#5ce1e6"/>
+  <text x="112" y="564" fill="#0a0c12" font-family="DejaVu Sans, sans-serif" font-size="25" font-weight="700">luisq-dev.github.io</text>
+</svg>
